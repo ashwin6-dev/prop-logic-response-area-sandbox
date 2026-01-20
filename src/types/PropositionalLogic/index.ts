@@ -8,7 +8,7 @@ import { PropositionalLogic } from './PropositionalLogic.component'
 import { propositionalLogicAnswerSchema } from './PropositionalLogic.schema'
 
 export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
-  public readonly responseType = 'PROPOSITIONAL_LOGIC'
+  public readonly responseType = 'SANDBOX' // seems that it must be called SANDBOX?
 
   protected answerSchema = propositionalLogicAnswerSchema
 
