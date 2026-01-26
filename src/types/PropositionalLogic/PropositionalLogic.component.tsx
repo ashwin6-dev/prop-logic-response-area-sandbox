@@ -1,8 +1,14 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
+
+import {
+  OmniInputResponsArea,
+  OmniInputResponsAreaProps,
+} from '@components/OmniInput/OmniInputResponseArea.component'
+import { ResponseAreaOmniInputContainer } from '@modules/shared/components/ResponseArea/ResponseAreaOmniInputContainer.component'
+import React from 'react'
 
 import { BaseResponseAreaProps } from '../base-props.type'
 
@@ -10,8 +16,11 @@ type PropositionalLogicProps = Omit<
   BaseResponseAreaProps,
   'handleChange' | 'answer'
 > & {
-  handleChange: (val: string) => void
-  answer?: string
+  handleChange: OmniInputResponsAreaProps['handleChange']
+  answer: OmniInputResponsAreaProps['answer']
+  allowDraw: boolean
+  allowScan: boolean
+  enableRefinement: boolean
 }
 
 const SYMBOLS = [
@@ -29,75 +38,76 @@ const SYMBOLS = [
 export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   handleChange,
   handleSubmit,
-  answer = '',
+  answer,
+  allowDraw,
+  allowScan,
+  hasPreview,
+  enableRefinement,
+  feedback,
+  typesafeErrorMessage,
+  checkIsLoading,
+  preResponseText,
+  postResponseText,
+  responsePreviewParams,
+  displayMode,
 }) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // const insertSymbol = useCallback(
+  //   (symbol: string) => {
+  //     const currentValue = answer || ''
+  //     handleChange(currentValue + symbol)
+  //   },
+  //   [answer, handleChange],
+  // )
 
   const insertSymbol = useCallback(
     (symbol: string) => {
-      const textarea = textareaRef.current
-      if (!textarea) return
-
-      const start = textarea.selectionStart
-      const end = textarea.selectionEnd
+      console.log('insertSymbol called', { symbol, currentAnswer: answer })
       const currentValue = answer || ''
-      const newValue =
-        currentValue.slice(0, start) + symbol + currentValue.slice(end)
-
+      const newValue = currentValue + symbol
+      console.log('calling handleChange with:', newValue)
       handleChange(newValue)
-
-      requestAnimationFrame(() => {
-        if (textarea) {
-          const newPosition = start + symbol.length
-          textarea.focus()
-          textarea.setSelectionRange(newPosition, newPosition)
-        }
-      })
     },
     [answer, handleChange],
   )
 
-  const submitOnEnter: React.KeyboardEventHandler<HTMLTextAreaElement> =
-    useCallback(
-      event => {
-        if (event.key !== 'Enter' || event.shiftKey || !handleSubmit) return
-        event.preventDefault()
-        return handleSubmit()
-      },
-      [handleSubmit],
-    )
-
   return (
-    <Stack spacing={1}>
-      <Stack direction="row" spacing={1} flexWrap="wrap">
-        {SYMBOLS.map(symbol => (
-          <Button
-            key={symbol.value}
-            variant="outlined"
-            size="small"
-            onClick={() => insertSymbol(symbol.value)}
-            title={symbol.title}
-            sx={{ minWidth: '40px' }}
-          >
-            {symbol.label}
-          </Button>
-        ))}
+    <ResponseAreaOmniInputContainer
+      preResponseText={preResponseText}
+      postResponseText={postResponseText}>
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={1} flexWrap="wrap">
+          {SYMBOLS.map(symbol => (
+            <Button
+              key={symbol.value}
+              variant="outlined"
+              size="small"
+              onClick={() => insertSymbol(symbol.value)}
+              title={symbol.title}
+              sx={{ minWidth: '40px' }}
+            >
+              {symbol.label}
+            </Button>
+          ))}
+        </Stack>
+        <OmniInputResponsArea
+          key={answer}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          answer={answer}
+          processingMode="markdown"
+          allowDraw={allowDraw}
+          allowScan={allowScan}
+          hasPreview={hasPreview}
+          enableRefinement={enableRefinement}
+          feedback={feedback}
+          typesafeErrorMessage={typesafeErrorMessage}
+          checkIsLoading={checkIsLoading}
+          responsePreviewParams={responsePreviewParams}
+          displayMode={displayMode}
+        />
       </Stack>
-      <TextField
-        inputRef={textareaRef}
-        multiline
-        rows={4}
-        value={answer}
-        onChange={event => {
-          event.preventDefault()
-          handleChange(event.target.value)
-        }}
-        onKeyDown={submitOnEnter}
-        placeholder="Enter propositional logic formula..."
-        fullWidth
-      />
-    </Stack>
+    </ResponseAreaOmniInputContainer>
   )
 }
 
-export const HMR = true
+export const HMR = true // ensure HMR triggers on parent imports
