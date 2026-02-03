@@ -1,23 +1,21 @@
-import { useCallback } from 'react'
-
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
-
 import {
   OmniInputResponsArea,
   OmniInputResponsAreaProps,
 } from '@components/OmniInput/OmniInputResponseArea.component'
 import { ResponseAreaOmniInputContainer } from '@modules/shared/components/ResponseArea/ResponseAreaOmniInputContainer.component'
-import React from 'react'
-
 import { BaseResponseAreaProps } from '../base-props.type'
+import { PropositionalLogicAnswerSchema } from './PropositionalLogic.schema'
+import { TruthTableSection } from './TruthTableSection.component'
 
 type PropositionalLogicProps = Omit<
   BaseResponseAreaProps,
   'handleChange' | 'answer'
 > & {
-  handleChange: OmniInputResponsAreaProps['handleChange']
-  answer: OmniInputResponsAreaProps['answer']
+  handleChange: (answer: PropositionalLogicAnswerSchema) => void
+  answer: PropositionalLogicAnswerSchema | undefined
   allowDraw: boolean
   allowScan: boolean
   enableRefinement: boolean
@@ -35,6 +33,14 @@ const SYMBOLS = [
   { label: ')', value: ')', title: 'Right parenthesis' },
 ]
 
+function normalizeAnswer(
+  answer: PropositionalLogicAnswerSchema | undefined,
+): PropositionalLogicAnswerSchema {
+  if (answer == null) return { formula: '', truthTable: undefined }
+  if (typeof answer === 'string') return { formula: answer, truthTable: undefined }
+  return answer
+}
+
 export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   handleChange,
   handleSubmit,
@@ -51,63 +57,90 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   responsePreviewParams,
   displayMode,
 }) => {
-  // const insertSymbol = useCallback(
-  //   (symbol: string) => {
-  //     const currentValue = answer || ''
-  //     handleChange(currentValue + symbol)
-  //   },
-  //   [answer, handleChange],
-  // )
+  const normalized = useMemo(
+    () => normalizeAnswer(answer),
+    [answer],
+  )
+
+  // Live formula so TruthTableSection and Check button see typed content even if parent doesn't re-render
+  const [liveFormula, setLiveFormula] = useState(() => normalized.formula ?? '')
+  useEffect(() => {
+    setLiveFormula(normalized.formula ?? '')
+  }, [normalized.formula])
+
+  const onFormulaChange = useCallback<OmniInputResponsAreaProps['handleChange']>(
+    (newFormula) => {
+      setLiveFormula(newFormula)
+      handleChange({ ...normalized, formula: newFormula })
+    },
+    [normalized, handleChange],
+  )
 
   const insertSymbol = useCallback(
     (symbol: string) => {
-      console.log('insertSymbol called', { symbol, currentAnswer: answer })
-      const currentValue = answer || ''
-      const newValue = currentValue + symbol
-      console.log('calling handleChange with:', newValue)
-      handleChange(newValue)
+      const newFormula = (liveFormula ?? '') + symbol
+      setLiveFormula(newFormula)
+      handleChange({ ...normalized, formula: newFormula })
     },
-    [answer, handleChange],
+    [normalized, liveFormula, handleChange],
+  )
+
+  const onTruthTableChange = useCallback(
+    (truthTable: PropositionalLogicAnswerSchema['truthTable']) => {
+      if (!truthTable) return
+      handleChange({ ...normalized, truthTable })
+    },
+    [normalized, handleChange],
   )
 
   return (
     <ResponseAreaOmniInputContainer
       preResponseText={preResponseText}
       postResponseText={postResponseText}>
-      <Stack spacing={1}>
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          {SYMBOLS.map(symbol => (
-            <Button
-              key={symbol.value}
-              variant="outlined"
-              size="small"
-              onClick={() => insertSymbol(symbol.value)}
-              title={symbol.title}
-              sx={{ minWidth: '40px' }}
-            >
-              {symbol.label}
-            </Button>
-          ))}
+      <Stack spacing={2}>
+        <Stack spacing={1}>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {SYMBOLS.map(symbol => (
+              <Button
+                key={symbol.value}
+                variant="outlined"
+                size="small"
+                onClick={() => insertSymbol(symbol.value)}
+                title={symbol.title}
+                sx={{ minWidth: '40px' }}
+              >
+                {symbol.label}
+              </Button>
+            ))}
+          </Stack>
+          <OmniInputResponsArea
+            handleChange={onFormulaChange}
+            handleSubmit={handleSubmit}
+            answer={normalized.formula}
+            processingMode="markdown"
+            allowDraw={allowDraw}
+            allowScan={allowScan}
+            hasPreview={hasPreview}
+            enableRefinement={enableRefinement}
+            feedback={feedback}
+            typesafeErrorMessage={typesafeErrorMessage}
+            checkIsLoading={checkIsLoading}
+            responsePreviewParams={responsePreviewParams}
+            displayMode={displayMode}
+          />
         </Stack>
-        <OmniInputResponsArea
-          key={answer}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          answer={answer}
-          processingMode="markdown"
+
+        <TruthTableSection
+          formula={liveFormula}
+          truthTable={normalized.truthTable}
+          onTruthTableChange={onTruthTableChange}
           allowDraw={allowDraw}
           allowScan={allowScan}
-          hasPreview={hasPreview}
-          enableRefinement={enableRefinement}
-          feedback={feedback}
-          typesafeErrorMessage={typesafeErrorMessage}
-          checkIsLoading={checkIsLoading}
-          responsePreviewParams={responsePreviewParams}
-          displayMode={displayMode}
+          processingMode="markdown"
         />
       </Stack>
     </ResponseAreaOmniInputContainer>
   )
 }
 
-export const HMR = true // ensure HMR triggers on parent imports
+export const HMR = true

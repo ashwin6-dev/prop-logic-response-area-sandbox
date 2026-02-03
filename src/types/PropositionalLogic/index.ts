@@ -15,7 +15,7 @@ import {
  import { PropositionalLogicWizard } from './PropositionalLogicWizard.component'
 
 export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
-  public readonly responseType = 'SANDBOX' // seems that it must be called SANDBOX?
+  public readonly responseType = 'PROPOSITIONAL_LOGIC' // seems that it must be called SANDBOX?
 
   public readonly canToggleLatexInStats = false
 
@@ -45,20 +45,25 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
     this.config = {
       allowHandwrite: true,
       allowPhoto: true,
-      enableRefinement: true,
+      enableRefinement: false,
     }
-    this.answer = ''
+    this.answer = { formula: '', truthTable: undefined }
   }
 
   InputComponent = (props: BaseResponseAreaProps) => {
     if (!this.config) throw new Error('Config missing')
     const parsedAnswer = this.answerSchema.safeParse(props.answer)
+    const handleChange = (answer: PropositionalLogicAnswerSchema) => {
+      props.handleChange(
+        answer as unknown as Parameters<typeof props.handleChange>[0],
+      )
+    }
 
     return PropositionalLogic({
       ...props,
       hasPreview: false,
+      handleChange,
       answer: parsedAnswer.success ? parsedAnswer.data : undefined,
-      
       allowDraw: this.config.allowHandwrite,
       allowScan: this.config.allowPhoto,
       enableRefinement: this.config.enableRefinement,
@@ -69,8 +74,19 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
     if (!this.config) throw new Error('Config missing')
     if (this.answer === undefined) throw new Error('Answer missing')
 
+    const formula =
+      typeof this.answer === 'object' && this.answer && 'formula' in this.answer
+        ? (this.answer as PropositionalLogicAnswerSchema).formula
+        : String(this.answer ?? '')
+    const existingTruthTable =
+      typeof this.answer === 'object' &&
+      this.answer &&
+      'truthTable' in this.answer
+        ? (this.answer as PropositionalLogicAnswerSchema).truthTable
+        : undefined
+
     return PropositionalLogicWizard({
-      answer: this.answer,
+      answer: formula,
       ...this.config,
       onChange: args => {
         props.handleChange({
@@ -79,8 +95,11 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
             allowHandwrite: args.allowHandwrite,
             allowPhoto: args.allowPhoto,
           },
-          answer: args.answer,
-        })
+          answer: {
+            formula: args.answer,
+            truthTable: existingTruthTable,
+          },
+        } as unknown as Parameters<typeof props.handleChange>[0])
       },
     })
   }
