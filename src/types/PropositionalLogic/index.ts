@@ -14,7 +14,7 @@ import {
 } from './PropositionalLogic.schema'
 
 export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
-  public readonly responseType = 'PROPOSITIONAL_LOGIC' // seems that it must be called SANDBOX?
+  public readonly responseType = 'SANDBOX' // seems that it must be called SANDBOX?
 
   public readonly canToggleLatexInStats = false
 
