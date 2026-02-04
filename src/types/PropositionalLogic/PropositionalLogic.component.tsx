@@ -105,6 +105,15 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   const displayAnswer =
     pendingFromSymbolRef.current !== null ? pendingFromSymbolRef.current : currentFormula
 
+  const onSubmit = useCallback(() => {
+    const answerToSend = {
+      formula: currentFormula,
+      truthTable: answerObject.truthTable,
+    }
+    console.log('PropositionalLogic submit – answer being sent:', answerToSend)
+    handleSubmit?.()
+  }, [currentFormula, answerObject.truthTable, handleSubmit])
+
   return (
     <ResponseAreaOmniInputContainer
       preResponseText={preResponseText}
@@ -127,7 +136,7 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
         <OmniInputResponsArea
           key={formulaKey}
           handleChange={onFormulaChange}
-          handleSubmit={handleSubmit}
+          handleSubmit={onSubmit}
           answer={displayAnswer}
           processingMode="markdown"
           allowDraw={allowDraw}

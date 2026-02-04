@@ -5,14 +5,13 @@ import {
 import { ResponseAreaTub } from '../response-area-tub'
 
 import { PropositionalLogic } from './PropositionalLogic.component'
-import { 
+import { PropositionalLogicWizard } from './PropositionalLogicWizard.component'
+import {
   propositionalLogicConfigSchema,
   PropositionalLogicConfigSchema,
   propositionalLogicAnswerSchema,
   PropositionalLogicAnswerSchema,
- } from './PropositionalLogic.schema'
-
- import { PropositionalLogicWizard } from './PropositionalLogicWizard.component'
+} from './PropositionalLogic.schema'
 
 export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
   public readonly responseType = 'PROPOSITIONAL_LOGIC' // seems that it must be called SANDBOX?
@@ -74,33 +73,21 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
     if (!this.config) throw new Error('Config missing')
     if (this.answer === undefined) throw new Error('Answer missing')
 
-    const formula =
-      typeof this.answer === 'object' && this.answer && 'formula' in this.answer
-        ? (this.answer as PropositionalLogicAnswerSchema).formula
-        : typeof this.answer === 'string'
-          ? this.answer
-          : ''
-    const existingTruthTable =
-      typeof this.answer === 'object' &&
-      this.answer &&
-      'truthTable' in this.answer
-        ? (this.answer as PropositionalLogicAnswerSchema).truthTable
-        : undefined
+    const parsed = this.answerSchema.safeParse(this.answer)
+    const answerObject: PropositionalLogicAnswerSchema = parsed.success
+      ? parsed.data
+      : { formula: '', truthTable: undefined }
 
     return PropositionalLogicWizard({
-      answer: formula,
-      ...this.config,
+      answer: answerObject,
+      allowHandwrite: this.config.allowHandwrite,
+      allowPhoto: this.config.allowPhoto,
+      setAllowSave: props.setAllowSave,
       onChange: args => {
         props.handleChange({
           responseType: this.responseType,
-          config: {
-            allowHandwrite: args.allowHandwrite,
-            allowPhoto: args.allowPhoto,
-          },
-          answer: {
-            formula: args.answer,
-            truthTable: existingTruthTable,
-          },
+          config: this.config,
+          answer: JSON.stringify(args.answer) as unknown as PropositionalLogicAnswerSchema,
         } as unknown as Parameters<typeof props.handleChange>[0])
       },
     })

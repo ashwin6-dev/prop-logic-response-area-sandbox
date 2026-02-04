@@ -17,12 +17,28 @@ export const truthTableSchema = z.object({
 
 export type TruthTableSchema = z.infer<typeof truthTableSchema>
 
+const propositionalLogicObjectSchema = z.object({
+  formula: z.string(),
+  truthTable: truthTableSchema.nullish().optional(),
+})
+
 export const propositionalLogicAnswerSchema = z.union([
-  z.string().transform(s => ({ formula: s, truthTable: undefined })),
-  z.object({
-    formula: z.string(),
-    truthTable: truthTableSchema.optional(),
+  z.string().transform((s): z.infer<typeof propositionalLogicObjectSchema> => {
+    const trimmed = s.trim()
+    if (trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(s) as unknown
+        if (typeof parsed === 'object' && parsed !== null && 'formula' in parsed) {
+          const result = propositionalLogicObjectSchema.safeParse(parsed)
+          if (result.success) return result.data
+        }
+      } catch {
+        // fall through to legacy formula string
+      }
+    }
+    return { formula: s, truthTable: undefined }
   }),
+  propositionalLogicObjectSchema,
 ])
 
 export type PropositionalLogicAnswerSchema = z.infer<
