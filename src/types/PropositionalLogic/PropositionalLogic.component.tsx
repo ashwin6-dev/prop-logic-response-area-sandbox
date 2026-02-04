@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import {
@@ -33,14 +33,6 @@ const SYMBOLS = [
   { label: ')', value: ')', title: 'Right parenthesis' },
 ]
 
-function normalizeAnswer(
-  answer: PropositionalLogicAnswerSchema | undefined,
-): PropositionalLogicAnswerSchema {
-  if (answer == null) return { formula: '', truthTable: undefined }
-  if (typeof answer === 'string') return { formula: answer, truthTable: undefined }
-  return answer
-}
-
 export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   handleChange,
   handleSubmit,
@@ -57,83 +49,102 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   responsePreviewParams,
   displayMode,
 }) => {
-  const normalized = useMemo(
-    () => normalizeAnswer(answer),
-    [answer],
-  )
+  // Normalize answer to object shape { formula, truthTable }
+  const answerObject = answer ?? { formula: '', truthTable: undefined }
+  const currentFormula = answerObject.formula ?? ''
 
-  // Live formula so TruthTableSection and Check button see typed content even if parent doesn't re-render
-  const [liveFormula, setLiveFormula] = useState(() => normalized.formula ?? '')
+  // Remount OmniInput when symbol button is clicked so it shows updated value (it only reads defaultValue on mount)
+  const [formulaKey, setFormulaKey] = useState(0)
+  const pendingFromSymbolRef = useRef<string | null>(null)
+
   useEffect(() => {
-    setLiveFormula(normalized.formula ?? '')
-  }, [normalized.formula])
+    if (formulaKey > 0) pendingFromSymbolRef.current = null
+  }, [formulaKey])
 
   const onFormulaChange = useCallback<OmniInputResponsAreaProps['handleChange']>(
     (newFormula) => {
-      setLiveFormula(newFormula)
-      handleChange({ ...normalized, formula: newFormula })
+      handleChange({
+        formula: newFormula,
+        truthTable: answerObject.truthTable,
+      })
     },
-    [normalized, handleChange],
+    [answerObject.truthTable, handleChange],
   )
 
   const insertSymbol = useCallback(
     (symbol: string) => {
-      const newFormula = (liveFormula ?? '') + symbol
-      setLiveFormula(newFormula)
-      handleChange({ ...normalized, formula: newFormula })
+      const newValue = currentFormula + symbol
+      handleChange({
+        formula: newValue,
+        truthTable: answerObject.truthTable,
+      })
+      pendingFromSymbolRef.current = newValue
+      setFormulaKey(k => k + 1)
     },
-    [normalized, liveFormula, handleChange],
+    [currentFormula, answerObject.truthTable, handleChange],
   )
 
   const onTruthTableChange = useCallback(
     (truthTable: PropositionalLogicAnswerSchema['truthTable']) => {
       if (!truthTable) return
-      handleChange({ ...normalized, truthTable })
+      handleChange({
+        formula: currentFormula,
+        truthTable,
+      })
     },
-    [normalized, handleChange],
+    [currentFormula, handleChange],
   )
+
+  const onRemoveTruthTable = useCallback(() => {
+    handleChange({
+      formula: currentFormula,
+      truthTable: undefined,
+    })
+  }, [currentFormula, handleChange])
+
+  const displayAnswer =
+    pendingFromSymbolRef.current !== null ? pendingFromSymbolRef.current : currentFormula
 
   return (
     <ResponseAreaOmniInputContainer
       preResponseText={preResponseText}
       postResponseText={postResponseText}>
-      <Stack spacing={2}>
-        <Stack spacing={1}>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {SYMBOLS.map(symbol => (
-              <Button
-                key={symbol.value}
-                variant="outlined"
-                size="small"
-                onClick={() => insertSymbol(symbol.value)}
-                title={symbol.title}
-                sx={{ minWidth: '40px' }}
-              >
-                {symbol.label}
-              </Button>
-            ))}
-          </Stack>
-          <OmniInputResponsArea
-            handleChange={onFormulaChange}
-            handleSubmit={handleSubmit}
-            answer={normalized.formula}
-            processingMode="markdown"
-            allowDraw={allowDraw}
-            allowScan={allowScan}
-            hasPreview={hasPreview}
-            enableRefinement={enableRefinement}
-            feedback={feedback}
-            typesafeErrorMessage={typesafeErrorMessage}
-            checkIsLoading={checkIsLoading}
-            responsePreviewParams={responsePreviewParams}
-            displayMode={displayMode}
-          />
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={1} flexWrap="wrap">
+          {SYMBOLS.map(symbol => (
+            <Button
+              key={symbol.value}
+              variant="outlined"
+              size="small"
+              onClick={() => insertSymbol(symbol.value)}
+              title={symbol.title}
+              sx={{ minWidth: '40px' }}
+            >
+              {symbol.label}
+            </Button>
+          ))}
         </Stack>
-
+        <OmniInputResponsArea
+          key={formulaKey}
+          handleChange={onFormulaChange}
+          handleSubmit={handleSubmit}
+          answer={displayAnswer}
+          processingMode="markdown"
+          allowDraw={allowDraw}
+          allowScan={allowScan}
+          hasPreview={hasPreview}
+          enableRefinement={false}
+          feedback={feedback}
+          typesafeErrorMessage={typesafeErrorMessage}
+          checkIsLoading={checkIsLoading}
+          responsePreviewParams={responsePreviewParams}
+          displayMode={displayMode}
+        />
         <TruthTableSection
-          formula={liveFormula}
-          truthTable={normalized.truthTable}
+          formula={currentFormula}
+          truthTable={answerObject.truthTable}
           onTruthTableChange={onTruthTableChange}
+          onRemoveTruthTable={onRemoveTruthTable}
           allowDraw={allowDraw}
           allowScan={allowScan}
           processingMode="markdown"

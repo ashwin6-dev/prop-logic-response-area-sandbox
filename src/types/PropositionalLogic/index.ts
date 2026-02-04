@@ -77,7 +77,9 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
     const formula =
       typeof this.answer === 'object' && this.answer && 'formula' in this.answer
         ? (this.answer as PropositionalLogicAnswerSchema).formula
-        : String(this.answer ?? '')
+        : typeof this.answer === 'string'
+          ? this.answer
+          : ''
     const existingTruthTable =
       typeof this.answer === 'object' &&
       this.answer &&

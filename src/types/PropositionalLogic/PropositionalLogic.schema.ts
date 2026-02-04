@@ -29,9 +29,9 @@ export type PropositionalLogicAnswerSchema = z.infer<
   typeof propositionalLogicAnswerSchema
 >
 
-/** Parse unique single-letter variable names (A–Z) from a formula, sorted. */
+/** Parse unique single-letter variable names (A–Z or a–z) from a formula, sorted. */
 export function parseVariablesFromFormula(formula: string): string[] {
-  const letters = formula.match(/\b[A-Z]\b/g) ?? []
+  const letters = formula.match(/\b[A-Za-z]\b/g) ?? []
   return [...new Set(letters)].sort()
 }
 

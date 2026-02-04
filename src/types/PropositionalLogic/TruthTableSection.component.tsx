@@ -1,6 +1,8 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
@@ -9,65 +11,58 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
-import { OmniInput } from '@components/OmniInput/OmniInput.component'
-import { InputMode } from '@components/OmniInput/OmniInput.types'
-import { OmniOutput } from '@components/OmniInput/utils'
-import { ProcessingMode } from '@components/ResponseArea/useMathpix'
 import {
   TruthTableSchema,
   parseVariablesFromFormula,
   buildEmptyTruthTableCells,
 } from './PropositionalLogic.schema'
 
+const TRUE_FALSE_OPTIONS = [
+  { value: '', label: '—' },
+  { value: '⊤', label: '⊤ (true)' },
+  { value: '⊥', label: '⊥ (false)' },
+]
+
 export type TruthTableSectionProps = {
   formula: string
   truthTable: TruthTableSchema | undefined
   onTruthTableChange: (truthTable: TruthTableSchema) => void
+  onRemoveTruthTable?: () => void
   allowDraw: boolean
   allowScan: boolean
-  processingMode?: ProcessingMode
+  processingMode?: string
 }
 
 export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
   formula,
   truthTable,
   onTruthTableChange,
-  allowDraw,
-  allowScan,
-  processingMode = 'markdown',
+  onRemoveTruthTable,
 }) => {
-  const [selectedCell, setSelectedCell] = useState<{
-    row: number
-    col: number
-  } | null>(null)
-
   const handleAddTruthTable = useCallback(() => {
-    const parsed = parseVariablesFromFormula(formula)
-    const variables =
-      parsed.length > 0 ? parsed : ['P', 'Q']
+    const variables = parseVariablesFromFormula(formula)
+    if (variables.length === 0) return
     const cells = buildEmptyTruthTableCells(variables)
     onTruthTableChange({ variables, cells })
   }, [formula, onTruthTableChange])
 
-  const handleCellEditorChange = useCallback(
-    (omniOutput: OmniOutput, _inputMode: InputMode) => {
-      if (!selectedCell || !truthTable) return
+  const handleCellChange = useCallback(
+    (rowIndex: number, colIndex: number, value: string) => {
+      if (!truthTable) return
       const { cells } = truthTable
       const next = cells.map((row, r) =>
-        r === selectedCell.row
-          ? row.map((val, c) =>
-              c === selectedCell.col ? (omniOutput.raw ?? '') : val,
-            )
+        r === rowIndex
+          ? row.map((val, c) => (c === colIndex ? value : val))
           : row,
       )
       onTruthTableChange({ ...truthTable, cells: next })
     },
-    [selectedCell, truthTable, onTruthTableChange],
+    [truthTable, onTruthTableChange],
   )
 
   const variables = truthTable?.variables ?? []
   const cells = truthTable?.cells ?? []
-  const canAddTable = !truthTable
+  const canAddTable = !truthTable && formula.trim() !== ''
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -81,9 +76,20 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
         </Button>
       ) : (
         <>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Truth table for formula
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ flex: 1 }}>
+              Truth table for formula
+            </Typography>
+            {onRemoveTruthTable && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={onRemoveTruthTable}>
+                Remove truth table
+              </Button>
+            )}
+          </Box>
           <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
             <Table size="small" stickyHeader>
               <TableHead>
@@ -105,21 +111,35 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
                       <TableCell
                         key={colIndex}
                         align="center"
-                        onClick={() => setSelectedCell({ row: rowIndex, col: colIndex })}
                         sx={{
-                          cursor: 'pointer',
-                          minWidth: 56,
-                          minHeight: 40,
-                          backgroundColor:
-                            selectedCell?.row === rowIndex &&
-                            selectedCell?.col === colIndex
-                              ? 'action.selected'
-                              : undefined,
+                          minWidth: 72,
+                          padding: 0.5,
+                          verticalAlign: 'middle',
                           border: '1px solid',
                           borderColor: 'divider',
-                          verticalAlign: 'middle',
                         }}>
-                        {cellValue || '·'}
+                        <Select
+                          value={cellValue ?? ''}
+                          onChange={e =>
+                            handleCellChange(
+                              rowIndex,
+                              colIndex,
+                              e.target.value as string,
+                            )
+                          }
+                          size="small"
+                          displayEmpty
+                          sx={{
+                            minWidth: 56,
+                            fontSize: '0.875rem',
+                            '& .MuiSelect-select': { py: 0.75 },
+                          }}>
+                          {TRUE_FALSE_OPTIONS.map(opt => (
+                            <MenuItem key={opt.value || 'empty'} value={opt.value}>
+                              {opt.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
                       </TableCell>
                     ))}
                   </TableRow>
@@ -127,39 +147,6 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
               </TableBody>
             </Table>
           </TableContainer>
-
-          {selectedCell && (
-            <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                p: 1,
-                minHeight: 140,
-              }}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                Edit cell (row {selectedCell.row + 1}, col{' '}
-                {selectedCell.col < variables.length
-                  ? variables[selectedCell.col]
-                  : 'Result'}
-                ): type or draw below
-              </Typography>
-              <OmniInput
-                key={`${selectedCell.row}-${selectedCell.col}`}
-                defaultValue={cells[selectedCell.row]?.[selectedCell.col] ?? ''}
-                onChange={handleCellEditorChange}
-                processingMode={processingMode}
-                allowDraw={allowDraw}
-                allowScan={false}
-                showPreview={false}
-                enableRefinement={false}
-                requireRefinement={false}
-                showAssessment={false}
-                showSubmitButton={false}
-                placeholder="T / F / 1 / 0 or draw"
-              />
-            </Box>
-          )}
         </>
       )}
     </Box>
