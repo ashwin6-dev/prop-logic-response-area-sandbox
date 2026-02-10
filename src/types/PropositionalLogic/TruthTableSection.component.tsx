@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import MenuItem from '@mui/material/MenuItem'
@@ -11,16 +11,27 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
-import {
-  TruthTableSchema,
-  parseVariablesFromFormula,
-  buildEmptyTruthTableCells,
-} from './PropositionalLogic.schema'
+import TextField from '@mui/material/TextField'
+import Stack from '@mui/material/Stack'
+import AddIcon from '@mui/icons-material/Add'
+import { TruthTableSchema } from './PropositionalLogic.schema'
 
 const TRUE_FALSE_OPTIONS = [
   { value: '', label: '—' },
   { value: '⊤', label: '⊤ (true)' },
   { value: '⊥', label: '⊥ (false)' },
+]
+
+const SYMBOLS = [
+  { label: '¬', value: '¬', title: 'Not' },
+  { label: '∧', value: '∧', title: 'And' },
+  { label: '∨', value: '∨', title: 'Or' },
+  { label: '→', value: '→', title: 'Implies' },
+  { label: '↔', value: '↔', title: 'If and only if' },
+  { label: '⊥', value: '⊥', title: 'False' },
+  { label: '⊤', value: '⊤', title: 'True' },
+  { label: '(', value: '(', title: 'Left parenthesis' },
+  { label: ')', value: ')', title: 'Right parenthesis' },
 ]
 
 export type TruthTableSectionProps = {
@@ -39,11 +50,12 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
   onTruthTableChange,
   onRemoveTruthTable,
 }) => {
+
   const handleAddTruthTable = useCallback(() => {
-    const variables = parseVariablesFromFormula(formula)
-    if (variables.length === 0) return
-    const cells = buildEmptyTruthTableCells(variables)
-    onTruthTableChange({ variables, cells })
+    // Start with 1x1 table with formula as column name
+    const initialColumnName = formula || 'Expression'
+    const cells = [['']] // 1 row, 1 column
+    onTruthTableChange({ variables: [initialColumnName], cells })
   }, [formula, onTruthTableChange])
 
   const handleCellChange = useCallback(
@@ -60,9 +72,66 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
     [truthTable, onTruthTableChange],
   )
 
-  const variables = truthTable?.variables ?? []
+  const handleColumnNameChange = useCallback(
+    (colIndex: number, newName: string) => {
+      if (!truthTable) return
+      const { variables } = truthTable
+      const next = variables.map((v, i) => (i === colIndex ? newName : v))
+      onTruthTableChange({ ...truthTable, variables: next })
+    },
+    [truthTable, onTruthTableChange],
+  )
+
+  const handleAddRow = useCallback(() => {
+    if (!truthTable) return
+    const { cells, variables } = truthTable
+    const numCols = variables.length
+    const newRow = Array(numCols).fill('')
+    const nextCells = [...cells, newRow]
+    onTruthTableChange({ ...truthTable, cells: nextCells })
+  }, [truthTable, onTruthTableChange])
+
+  const handleAddColumn = useCallback(() => {
+    if (!truthTable) return
+    const { cells, variables } = truthTable
+    // Add empty column name before the last column (which is the formula)
+    // Ensure the last column is always the formula
+    const formulaColumn = formula || 'Expression'
+    const nextVariables = [...variables.slice(0, -1), '', formulaColumn]
+    // Add empty cell to each row before the last column
+    const nextCells = cells.map(row => [...row.slice(0, -1), '', row[row.length - 1] || ''])
+    onTruthTableChange({ variables: nextVariables, cells: nextCells })
+  }, [truthTable, formula, onTruthTableChange])
+
+  const columnNames = truthTable?.variables ?? []
   const cells = truthTable?.cells ?? []
-  const canAddTable = !truthTable && formula.trim() !== ''
+  const canAddTable = !truthTable
+  
+  // Track which column input has focus for symbol insertion
+  const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null)
+  const columnInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({})
+
+  const handleInsertSymbol = useCallback(
+    (symbol: string, colIndex: number) => {
+      if (!truthTable) return
+      const { variables } = truthTable
+      const currentName = variables[colIndex] || ''
+      const newName = currentName + symbol
+      handleColumnNameChange(colIndex, newName)
+      
+      // Focus back on the input after inserting symbol
+      setTimeout(() => {
+        const input = columnInputRefs.current[colIndex]
+        if (input) {
+          input.focus()
+          // Move cursor to end
+          const len = input.value.length
+          input.setSelectionRange(len, len)
+        }
+      }, 0)
+    },
+    [truthTable, handleColumnNameChange],
+  )
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -90,18 +159,84 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
               </Button>
             )}
           </Box>
+          <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={handleAddRow}
+              size="small">
+              Add Row
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={handleAddColumn}
+              size="small">
+              Add Column
+            </Button>
+          </Box>
           <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  {variables.map(v => (
-                    <TableCell key={v} align="center" sx={{ fontWeight: 600 }}>
-                      {v}
-                    </TableCell>
-                  ))}
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>
-                    Result
-                  </TableCell>
+                  {columnNames.map((name, idx) => {
+                    const isLastColumn = idx === columnNames.length - 1
+                    const displayName = isLastColumn ? (formula || 'Expression') : name
+                    return (
+                      <TableCell key={idx} align="center" sx={{ fontWeight: 600 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <TextField
+                            inputRef={(el: HTMLInputElement | null) => {
+                              if (!isLastColumn) {
+                                columnInputRefs.current[idx] = el
+                              }
+                            }}
+                            value={displayName}
+                            onChange={isLastColumn ? undefined : (e => handleColumnNameChange(idx, e.target.value))}
+                            onFocus={isLastColumn ? undefined : () => setFocusedColumnIndex(idx)}
+                            onBlur={isLastColumn ? undefined : () => setFocusedColumnIndex(null)}
+                            placeholder={isLastColumn ? (formula || 'Expression') : 'Name column here'}
+                            InputProps={{
+                              readOnly: isLastColumn,
+                            }}
+                            size="small"
+                            inputProps={{
+                              style: { textAlign: 'center', fontWeight: 600 },
+                            }}
+                            sx={{
+                              '& .MuiInputBase-root': {
+                                fontSize: '0.875rem',
+                              },
+                              '& .MuiInputBase-input': {
+                                padding: '4px 8px',
+                              },
+                              ...(isLastColumn && {
+                                '& .MuiInputBase-input': {
+                                  cursor: 'default',
+                                },
+                              }),
+                            }}
+                          />
+                          {focusedColumnIndex === idx && !isLastColumn && (
+                            <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap">
+                              {SYMBOLS.map(sym => (
+                                <Button
+                                  key={sym.value}
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => handleInsertSymbol(sym.value, idx)}
+                                  title={sym.title}
+                                  sx={{ minWidth: 32, height: 28, fontSize: '0.75rem', padding: '2px 4px' }}
+                                >
+                                  {sym.label}
+                                </Button>
+                              ))}
+                            </Stack>
+                          )}
+                        </Box>
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               </TableHead>
               <TableBody>
