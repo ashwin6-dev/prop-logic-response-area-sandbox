@@ -8,6 +8,7 @@ import { MatrixResponseAreaTub } from './Matrix'
 import { MultipleChoiceResponseAreaTub } from './MultipleChoice'
 import { NumberResponseAreaTub } from './NumberInput'
 import { NumericUnitsResponseAreaTub } from './NumericUnits'
+import { PropositionalLogicResponseAreaTub } from './PropositionalLogic'
 import { ResponseAreaTub } from './response-area-tub'
 import { isResponseAreaSandboxType } from './sandbox'
 import { TableResponseAreaTub } from './Table'
@@ -32,6 +33,7 @@ export const supportedResponseTypes = [
   'MATH_SINGLE_LINE',
   'MATH_MULTI_LINES',
   'IMAGES',
+  'PROPOSITIONAL_LOGIC'
 ]
 
 const createReponseAreaTub = (type: string): ResponseAreaTub => {
@@ -40,6 +42,8 @@ const createReponseAreaTub = (type: string): ResponseAreaTub => {
   }
 
   switch (type) {
+    case 'PROPOSITIONAL_LOGIC':
+      return new PropositionalLogicResponseAreaTub()
     case 'BOOLEAN':
       return new TrueFalseResponseAreaTub()
     case 'TEXT':
