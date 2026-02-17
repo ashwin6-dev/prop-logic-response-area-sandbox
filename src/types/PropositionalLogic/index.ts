@@ -14,23 +14,7 @@ import {
 } from './PropositionalLogic.schema'
 
 export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
-  public readonly responseType = 'SANDBOX' // seems that it must be called SANDBOX?
-
-  public readonly canToggleLatexInStats = false
-
-  public readonly delegatePreResponseText = false
-
-  public readonly delegatePostResponseText = false
-
-  public readonly delegateLivePreview = false
-
-  public readonly delegateFeedback = false
-
-  public readonly delegateCheck = false
-
-  public readonly delegateErrorMessage = false
-
-  public readonly displayInFlexContainer = false
+  public readonly responseType = 'PROPOSITIONAL_LOGIC'
 
   protected answerSchema = propositionalLogicAnswerSchema
 
@@ -53,8 +37,9 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
     if (!this.config) throw new Error('Config missing')
     const parsedAnswer = this.answerSchema.safeParse(props.answer)
     const handleChange = (answer: PropositionalLogicAnswerSchema) => {
+      console.log("answer:: ", answer);
       props.handleChange(
-        answer as unknown as Parameters<typeof props.handleChange>[0],
+        answer
       )
     }
 

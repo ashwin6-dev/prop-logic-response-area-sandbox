@@ -4,6 +4,7 @@ export const propositionalLogicConfigSchema = z.object({
   allowHandwrite: z.boolean(),
   allowPhoto: z.boolean(),
   enableRefinement: z.boolean().default(true),
+  type: z.enum(['satisfiability', 'tautology', 'equivalence', 'truthTable']).optional(),
 })
 
 export type PropositionalLogicConfigSchema = z.infer<
@@ -17,33 +18,12 @@ export const truthTableSchema = z.object({
 
 export type TruthTableSchema = z.infer<typeof truthTableSchema>
 
-const propositionalLogicObjectSchema = z.object({
+export const propositionalLogicAnswerSchema = z.object({
   formula: z.string(),
   truthTable: truthTableSchema.nullish().optional(),
 })
 
-export const propositionalLogicAnswerSchema = z.union([
-  z.string().transform((s): z.infer<typeof propositionalLogicObjectSchema> => {
-    const trimmed = s.trim()
-    if (trimmed.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(s) as unknown
-        if (typeof parsed === 'object' && parsed !== null && 'formula' in parsed) {
-          const result = propositionalLogicObjectSchema.safeParse(parsed)
-          if (result.success) return result.data
-        }
-      } catch {
-        // fall through to legacy formula string
-      }
-    }
-    return { formula: s, truthTable: undefined }
-  }),
-  propositionalLogicObjectSchema,
-])
-
-export type PropositionalLogicAnswerSchema = z.infer<
-  typeof propositionalLogicAnswerSchema
->
+export type PropositionalLogicAnswerSchema = z.infer<typeof propositionalLogicAnswerSchema>;
 
 /** Parse unique single-letter variable names (A–Z or a–z) from a formula, sorted. */
 export function parseVariablesFromFormula(formula: string): string[] {
