@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
+import {
+  OmniInputResponsArea,
+  OmniInputResponsAreaProps,
+} from '@components/OmniInput/OmniInputResponseArea.component'
 import { ResponseAreaOmniInputContainer } from '@modules/shared/components/ResponseArea/ResponseAreaOmniInputContainer.component'
 import { BaseResponseAreaProps } from '../base-props.type'
 import { PropositionalLogicAnswerSchema } from './PropositionalLogic.schema'
@@ -32,6 +35,7 @@ const SYMBOLS = [
 
 export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   handleChange,
+  handleSubmit,
   answer,
   allowDraw,
   allowScan,
@@ -49,7 +53,8 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   const answerObject = answer ?? { formula: '', truthTable: undefined }
   const currentFormula = answerObject.formula ?? ''
 
-  // displayAnswer tracks what we pass to handleChange, initialized from prop
+  // Remount OmniInput when symbol button is clicked so it shows updated value (it only reads defaultValue on mount)
+  const [formulaKey, setFormulaKey] = useState(0)
   const [displayAnswer, setDisplayAnswer] = useState(currentFormula)
 
   // Sync displayAnswer with answer prop when it changes
@@ -57,9 +62,8 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
     setDisplayAnswer(currentFormula)
   }, [currentFormula])
 
-  const onFormulaChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newFormula = event.target.value
+  const onFormulaChange = useCallback<OmniInputResponsAreaProps['handleChange']>(
+    (newFormula) => {
       setDisplayAnswer(newFormula)
       const answerToSubmit = {
         formula: newFormula,
@@ -79,6 +83,7 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
         truthTable: answerObject.truthTable,
       }
       handleChange(answerToSubmit)
+      setFormulaKey(k => k + 1)
     },
     [displayAnswer, answerObject.truthTable, handleChange],
   )
@@ -122,18 +127,22 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
             </Button>
           ))}
         </Stack>
-        <Stack direction="row" spacing={1} alignItems="flex-start">
-          <TextField
-            fullWidth
-            value={displayAnswer}
-            onChange={onFormulaChange}
-            placeholder="e.g. p ∧ q"
-            variant="outlined"
-            multiline
-            minRows={2}
-            maxRows={6}
-          />
-        </Stack>
+        <OmniInputResponsArea
+          key={formulaKey}
+          handleChange={onFormulaChange}
+          handleSubmit={handleSubmit}
+          answer={displayAnswer}
+          processingMode="markdown"
+          allowDraw={allowDraw}
+          allowScan={allowScan}
+          hasPreview={hasPreview}
+          enableRefinement={false}
+          feedback={feedback}
+          typesafeErrorMessage={typesafeErrorMessage}
+          checkIsLoading={checkIsLoading}
+          responsePreviewParams={responsePreviewParams}
+          displayMode={displayMode}
+        />
         <TruthTableSection
           formula={displayAnswer}
           truthTable={answerObject.truthTable ?? undefined}

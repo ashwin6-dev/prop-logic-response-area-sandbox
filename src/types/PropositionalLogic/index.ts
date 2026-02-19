@@ -9,55 +9,57 @@ import { ResponseAreaTub } from '../response-area-tub'
 import { PropositionalLogic } from './PropositionalLogic.component'
 import {
   PropositionalLogicAnswerSchema,
-  propositionalLogicConfigSchema,
   PropositionalLogicConfigSchema,
+  PropositionalLogicExpectedAnswerSchema,
+  propositionalLogicConfigSchema,
 } from './PropositionalLogic.schema'
 import { PropositionalLogicWizard } from './PropositionalLogicWizard.component'
-// import { deserializeAnswer, PersistedAnswer, serializeAnswer } from './utils/serialize'
 
 const EMPTY_ANSWER: PropositionalLogicAnswerSchema = {
   formula: '',
-  truthTable: null,
+  truthTable: undefined,
+}
+
+const EMPTY_EXPECTED: PropositionalLogicExpectedAnswerSchema = {
+  satisfiability: false,
+  tautology: false,
+  equivalent: null,
+  validTruthTable: false,
 }
 
 export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
   public readonly responseType = 'PROPOSITIONAL_LOGIC'
 
-  protected answerSchema = z.unknown()//propositionalLogicAnswerSchema
-  protected answer: string = JSON.stringify({ formula: '', truthTable: null })
+  protected answerSchema = z.unknown()
+  protected answer: string = JSON.stringify(EMPTY_ANSWER)
 
   protected configSchema = propositionalLogicConfigSchema
   protected config?: PropositionalLogicConfigSchema
 
-  /**
-   * Default MUST respect legacy schema
-   */
   initWithDefault = () => {
     this.config = {
       allowHandwrite: true,
       allowPhoto: true,
       enableRefinement: false,
     }
-
-    this.answer = JSON.stringify({ formula: '', truthTable: null })
+    this.answer = JSON.stringify(EMPTY_ANSWER)
   }
+
   InputComponent = (props: BaseResponseAreaProps) => {
     if (!this.config) throw new Error('Config missing')
-
-    let parsedAnswer
+    let parsedAnswer: PropositionalLogicAnswerSchema
     try {
-      parsedAnswer = JSON.parse(props.answer)
+      const raw = JSON.parse(props.answer)
+      parsedAnswer = {
+        formula: raw.formula ?? '',
+        truthTable: raw.truthTable ?? undefined,
+      }
     } catch {
       parsedAnswer = EMPTY_ANSWER
     }
-
     const handleChange = (answer: PropositionalLogicAnswerSchema) => {
-      console.log('Answer changed:', answer)
-      props.handleChange(
-        JSON.stringify(answer) // <- platform safe
-      )
+      props.handleChange(JSON.stringify(answer))
     }
-
     return PropositionalLogic({
       ...props,
       hasPreview: false,
@@ -71,23 +73,22 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
 
   WizardComponent = (props: BaseResponseAreaWizardProps) => {
     if (!this.config) throw new Error('Config missing')
-    if (!this.answer) throw new Error('Answer missing')
 
-    const answerObject =
-      JSON.parse(this.answer) ?? { formula: '', truthTable: null }
+    const expectedAnswer: PropositionalLogicExpectedAnswerSchema =
+      this.config.expectedAnswer ?? EMPTY_EXPECTED
 
     return PropositionalLogicWizard({
-      answer: answerObject,
+      expectedAnswer,
       allowHandwrite: this.config.allowHandwrite,
       allowPhoto: this.config.allowPhoto,
       setAllowSave: props.setAllowSave,
       onChange: args => {
-        console.log('Wizard answer changed:', args.answer)
+        this.config = { ...this.config!, expectedAnswer: args.expectedAnswer }
         props.handleChange({
           responseType: this.responseType,
           config: this.config,
-          answer: JSON.stringify(args.answer)
-        })
+          answer: this.config.expectedAnswer,
+        } as unknown as Parameters<typeof props.handleChange>[0])
       },
     })
   }
