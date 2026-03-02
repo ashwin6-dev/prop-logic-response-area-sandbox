@@ -6,7 +6,7 @@ import RadioGroup from '@mui/material/RadioGroup'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 
 import { PropositionalLogicExpectedAnswerSchema } from './PropositionalLogic.schema'
 
@@ -90,6 +90,10 @@ export const PropositionalLogicWizard: React.FC<
     ],
   )
 
+  const equivalentInputRef = useRef<HTMLInputElement | null>(null)
+  const cursorRef = useRef({ start: 0, end: 0 })
+  const pendingCursorRef = useRef<number | null>(null)
+
   const setEquivalentFormula = useCallback(
     (formula: string) => {
       onChange({
@@ -104,10 +108,36 @@ export const PropositionalLogicWizard: React.FC<
   const insertSymbol = useCallback(
     (symbol: string) => {
       const current = expectedAnswer.equivalent ?? ''
-      setEquivalentFormula(current + symbol)
+      const { start, end } = cursorRef.current
+      const newValue =
+        current.slice(0, start) + symbol + current.slice(end)
+      setEquivalentFormula(newValue)
+      pendingCursorRef.current = start + symbol.length
     },
     [expectedAnswer.equivalent, setEquivalentFormula],
   )
+
+  const updateCursor = useCallback(
+    (e: React.SyntheticEvent) => {
+      const target = e.target as HTMLInputElement | HTMLTextAreaElement
+      if ('selectionStart' in target && 'selectionEnd' in target) {
+        cursorRef.current = {
+          start: target.selectionStart ?? 0,
+          end: target.selectionEnd ?? 0,
+        }
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (pendingCursorRef.current !== null && equivalentInputRef.current) {
+      const pos = pendingCursorRef.current
+      pendingCursorRef.current = null
+      equivalentInputRef.current.focus()
+      equivalentInputRef.current.setSelectionRange(pos, pos)
+    }
+  }, [expectedAnswer.equivalent])
 
   return (
     <div>
@@ -163,7 +193,16 @@ export const PropositionalLogicWizard: React.FC<
             label="Equivalent formula"
             placeholder="e.g. p ∧ q"
             value={expectedAnswer.equivalent ?? ''}
-            onChange={e => setEquivalentFormula(e.target.value)}
+            onChange={e => {
+              updateCursor(e)
+              setEquivalentFormula(e.target.value)
+            }}
+            onSelect={updateCursor}
+            onKeyUp={updateCursor}
+            onMouseUp={updateCursor}
+            onBlur={updateCursor}
+            onFocus={updateCursor}
+            inputRef={equivalentInputRef}
             variant="outlined"
           />
         </Stack>

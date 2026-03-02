@@ -30,6 +30,22 @@ const EMPTY_EXPECTED: PropositionalLogicExpectedAnswerSchema = {
 export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
   public readonly responseType = 'PROPOSITIONAL_LOGIC'
 
+  public readonly canToggleLatexInStats = true
+
+  public readonly delegatePreResponseText = false
+
+  public readonly delegatePostResponseText = false
+
+  public readonly delegateLivePreview = false
+
+  public readonly delegateFeedback = true
+
+  public readonly delegateCheck = false
+
+  public readonly delegateErrorMessage = false
+
+  public readonly displayInFlexContainer = false
+
   protected answerSchema = z.unknown()
   protected answer: string = JSON.stringify(EMPTY_ANSWER)
 

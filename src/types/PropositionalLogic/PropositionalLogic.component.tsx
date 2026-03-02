@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import {
@@ -9,6 +9,7 @@ import { ResponseAreaOmniInputContainer } from '@modules/shared/components/Respo
 import { BaseResponseAreaProps } from '../base-props.type'
 import { PropositionalLogicAnswerSchema } from './PropositionalLogic.schema'
 import { TruthTableSection } from './TruthTableSection.component'
+import Box from '@mui/system/Box'
 
 type PropositionalLogicProps = Omit<
   BaseResponseAreaProps,
@@ -62,6 +63,10 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
     setDisplayAnswer(currentFormula)
   }, [currentFormula])
 
+  const omniInputContainerRef = useRef<HTMLDivElement | null>(null)
+  const cursorRef = useRef({ start: 0, end: 0 })
+  const pendingCursorRef = useRef<number | null>(null)
+
   const onFormulaChange = useCallback<OmniInputResponsAreaProps['handleChange']>(
     (newFormula) => {
       setDisplayAnswer(newFormula)
@@ -76,17 +81,80 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
 
   const insertSymbol = useCallback(
     (symbol: string) => {
-      const newValue = displayAnswer + symbol
+      const { start, end } = cursorRef.current
+      const newValue =
+        displayAnswer.slice(0, start) + symbol + displayAnswer.slice(end)
       setDisplayAnswer(newValue)
       const answerToSubmit = {
         formula: newValue,
         truthTable: answerObject.truthTable,
       }
       handleChange(answerToSubmit)
+      pendingCursorRef.current = start + symbol.length
       setFormulaKey(k => k + 1)
     },
     [displayAnswer, answerObject.truthTable, handleChange],
   )
+
+  // Attach cursor-tracking listeners to OmniInput's textarea (found via DOM)
+  useEffect(() => {
+    const container = omniInputContainerRef.current
+    if (!container) return
+
+    let timeoutId: ReturnType<typeof setTimeout>
+    let cleanup: (() => void) | undefined
+
+    const tryAttach = () => {
+      const textarea = container.querySelector('textarea')
+      if (textarea) {
+        const updateCursor = () => {
+          cursorRef.current = {
+            start: textarea.selectionStart ?? 0,
+            end: textarea.selectionEnd ?? 0,
+          }
+        }
+        const events = ['select', 'keyup', 'mouseup', 'blur', 'focus', 'input'] as const
+        events.forEach(ev => textarea.addEventListener(ev, updateCursor))
+        cleanup = () => {
+          events.forEach(ev => textarea.removeEventListener(ev, updateCursor))
+        }
+        return
+      }
+      timeoutId = setTimeout(tryAttach, 50)
+    }
+
+    tryAttach()
+
+    return () => {
+      clearTimeout(timeoutId)
+      cleanup?.()
+    }
+  }, [formulaKey])
+
+  // Restore cursor position after symbol insert (OmniInput remounts)
+  useEffect(() => {
+    const pos = pendingCursorRef.current
+    if (pos === null) return
+
+    const container = omniInputContainerRef.current
+    if (!container) return
+
+    const tryRestore = () => {
+      const textarea = container.querySelector('textarea')
+      if (textarea) {
+        pendingCursorRef.current = null
+        textarea.focus()
+        textarea.setSelectionRange(pos, pos)
+        return true
+      }
+      return false
+    }
+
+    if (!tryRestore()) {
+      const id = setTimeout(() => tryRestore(), 0)
+      return () => clearTimeout(id)
+    }
+  }, [displayAnswer, formulaKey])
 
   const onTruthTableChange = useCallback(
     (truthTable: PropositionalLogicAnswerSchema['truthTable']) => {
@@ -127,22 +195,24 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
             </Button>
           ))}
         </Stack>
-        <OmniInputResponsArea
-          key={formulaKey}
-          handleChange={onFormulaChange}
-          handleSubmit={handleSubmit}
-          answer={displayAnswer}
-          processingMode="markdown"
-          allowDraw={allowDraw}
-          allowScan={allowScan}
-          hasPreview={hasPreview}
-          enableRefinement={false}
-          feedback={feedback}
-          typesafeErrorMessage={typesafeErrorMessage}
-          checkIsLoading={checkIsLoading}
-          responsePreviewParams={responsePreviewParams}
-          displayMode={displayMode}
-        />
+        <Box ref={omniInputContainerRef}>
+          <OmniInputResponsArea
+            key={formulaKey}
+            handleChange={onFormulaChange}
+            handleSubmit={handleSubmit}
+            answer={displayAnswer}
+            processingMode="markdown"
+            allowDraw={allowDraw}
+            allowScan={allowScan}
+            hasPreview={hasPreview}
+            enableRefinement={false}
+            feedback={feedback}
+            typesafeErrorMessage={typesafeErrorMessage}
+            checkIsLoading={checkIsLoading}
+            responsePreviewParams={responsePreviewParams}
+            displayMode={displayMode}
+          />
+        </Box>
         <TruthTableSection
           formula={displayAnswer}
           truthTable={answerObject.truthTable ?? undefined}
