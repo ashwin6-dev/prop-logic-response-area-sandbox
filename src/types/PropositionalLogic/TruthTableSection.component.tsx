@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import Table from '@mui/material/Table'
@@ -14,6 +15,7 @@ import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import Stack from '@mui/material/Stack'
 import AddIcon from '@mui/icons-material/Add'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { TruthTableSchema } from './PropositionalLogic.schema'
 
 const TRUE_FALSE_OPTIONS = [
@@ -91,6 +93,16 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
     onTruthTableChange({ ...truthTable, cells: nextCells })
   }, [truthTable, onTruthTableChange])
 
+  const handleRemoveRow = useCallback(
+    (rowIndex: number) => {
+      if (!truthTable) return
+      const { cells } = truthTable
+      const nextCells = cells.filter((_, idx) => idx !== rowIndex)
+      onTruthTableChange({ ...truthTable, cells: nextCells })
+    },
+    [truthTable, onTruthTableChange],
+  )
+
   const handleAddColumn = useCallback(() => {
     if (!truthTable) return
     const { cells, variables } = truthTable
@@ -102,6 +114,22 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
     const nextCells = cells.map(row => [...row.slice(0, -1), '', row[row.length - 1] || ''])
     onTruthTableChange({ variables: nextVariables, cells: nextCells })
   }, [truthTable, formula, onTruthTableChange])
+
+  const handleRemoveColumn = useCallback(
+    (colIndex: number) => {
+      if (!truthTable) return
+      const { variables, cells } = truthTable
+      // Don't remove the last column (formula) and don't allow empty variable list
+      if (variables.length <= 1 || colIndex === variables.length - 1) return
+
+      const nextVariables = variables.filter((_, idx) => idx !== colIndex)
+      const nextCells = cells.map(row =>
+        row.filter((_, idx) => idx !== colIndex),
+      )
+      onTruthTableChange({ variables: nextVariables, cells: nextCells })
+    },
+    [truthTable, onTruthTableChange],
+  )
 
   const columnNames = truthTable?.variables ?? []
   const cells = truthTable?.cells ?? []
@@ -233,10 +261,22 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
                               ))}
                             </Stack>
                           )}
+                          {!isLastColumn && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                              <IconButton
+                                size="small"
+                                aria-label="Remove column"
+                                onClick={() => handleRemoveColumn(idx)}
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          )}
                         </Box>
                       </TableCell>
                     )
                   })}
+                  <TableCell />
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -277,6 +317,21 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
                         </Select>
                       </TableCell>
                     ))}
+                    <TableCell
+                      align="center"
+                      sx={{
+                        width: 48,
+                        padding: 0.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}>
+                      <IconButton
+                        size="small"
+                        aria-label="Remove row"
+                        onClick={() => handleRemoveRow(rowIndex)}>
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
