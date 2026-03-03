@@ -3,5 +3,5 @@ export const fetchData = <TData, TVariables>(
   _variables?: TVariables,
   _options?: unknown,
 ): (() => Promise<TData>) => {
-  return () => Promise.resolve({} as TData)
+  return null as any
 }

@@ -1,4 +1,3 @@
-import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Radio from '@mui/material/Radio'
@@ -9,18 +8,7 @@ import Typography from '@mui/material/Typography'
 import React, { useCallback, useEffect, useRef } from 'react'
 
 import { PropositionalLogicExpectedAnswerSchema } from './PropositionalLogic.schema'
-
-const SYMBOLS = [
-  { label: '¬', value: '¬', title: 'Not' },
-  { label: '∧', value: '∧', title: 'And' },
-  { label: '∨', value: '∨', title: 'Or' },
-  { label: '→', value: '→', title: 'Implies' },
-  { label: '↔', value: '↔', title: 'If and only if' },
-  { label: '⊥', value: '⊥', title: 'False' },
-  { label: '⊤', value: '⊤', title: 'True' },
-  { label: '(', value: '(', title: 'Left parenthesis' },
-  { label: ')', value: ')', title: 'Right parenthesis' },
-]
+import { PropositionalLogicSymbolKeyboard } from './PropositionalLogicSymbolKeyboard.component'
 
 type AnswerKind = 'satisfiability' | 'tautology' | 'equivalent' | 'validTruthTable'
 
@@ -174,20 +162,7 @@ export const PropositionalLogicWizard: React.FC<
 
       {kind === 'equivalent' && (
         <Stack spacing={1} sx={{ mt: 2 }}>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {SYMBOLS.map(sym => (
-              <Button
-                key={sym.value}
-                variant="outlined"
-                size="small"
-                onClick={() => insertSymbol(sym.value)}
-                title={sym.title}
-                sx={{ minWidth: '40px' }}
-              >
-                {sym.label}
-              </Button>
-            ))}
-          </Stack>
+          <PropositionalLogicSymbolKeyboard onInsert={insertSymbol} />
           <TextField
             fullWidth
             label="Equivalent formula"

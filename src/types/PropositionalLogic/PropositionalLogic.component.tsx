@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
+import Box from '@mui/system/Box'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+
 import {
   OmniInputResponsArea,
   OmniInputResponsAreaProps,
@@ -8,8 +9,8 @@ import {
 import { ResponseAreaOmniInputContainer } from '@modules/shared/components/ResponseArea/ResponseAreaOmniInputContainer.component'
 import { BaseResponseAreaProps } from '../base-props.type'
 import { PropositionalLogicAnswerSchema } from './PropositionalLogic.schema'
+import { PropositionalLogicSymbolKeyboard } from './PropositionalLogicSymbolKeyboard.component'
 import { TruthTableSection } from './TruthTableSection.component'
-import Box from '@mui/system/Box'
 
 type PropositionalLogicProps = Omit<
   BaseResponseAreaProps,
@@ -21,18 +22,6 @@ type PropositionalLogicProps = Omit<
   allowScan: boolean
   enableRefinement: boolean
 }
-
-const SYMBOLS = [
-  { label: '¬', value: '¬', title: 'Not' },
-  { label: '∧', value: '∧', title: 'And' },
-  { label: '∨', value: '∨', title: 'Or' },
-  { label: '→', value: '→', title: 'Implies' },
-  { label: '↔', value: '↔', title: 'If and only if' },
-  { label: '⊥', value: '⊥', title: 'False' },
-  { label: '⊤', value: '⊤', title: 'True' },
-  { label: '(', value: '(', title: 'Left parenthesis' },
-  { label: ')', value: ')', title: 'Right parenthesis' },
-]
 
 export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   handleChange,
@@ -67,16 +56,22 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   const cursorRef = useRef({ start: 0, end: 0 })
   const pendingCursorRef = useRef<number | null>(null)
 
+  const submitAnswer = useCallback(
+    (formula: string, truthTable: PropositionalLogicAnswerSchema['truthTable']) => {
+      handleChange({
+        formula,
+        truthTable,
+      })
+    },
+    [handleChange],
+  )
+
   const onFormulaChange = useCallback<OmniInputResponsAreaProps['handleChange']>(
     (newFormula) => {
       setDisplayAnswer(newFormula)
-      const answerToSubmit = {
-        formula: newFormula,
-        truthTable: answerObject.truthTable,
-      }
-      handleChange(answerToSubmit)
+      submitAnswer(newFormula, answerObject.truthTable)
     },
-    [answerObject.truthTable, handleChange],
+    [answerObject.truthTable, submitAnswer],
   )
 
   const insertSymbol = useCallback(
@@ -85,15 +80,11 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
       const newValue =
         displayAnswer.slice(0, start) + symbol + displayAnswer.slice(end)
       setDisplayAnswer(newValue)
-      const answerToSubmit = {
-        formula: newValue,
-        truthTable: answerObject.truthTable,
-      }
-      handleChange(answerToSubmit)
+      submitAnswer(newValue, answerObject.truthTable)
       pendingCursorRef.current = start + symbol.length
       setFormulaKey(k => k + 1)
     },
-    [displayAnswer, answerObject.truthTable, handleChange],
+    [displayAnswer, answerObject.truthTable, submitAnswer],
   )
 
   // Attach cursor-tracking listeners to OmniInput's textarea (found via DOM)
@@ -159,42 +150,21 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   const onTruthTableChange = useCallback(
     (truthTable: PropositionalLogicAnswerSchema['truthTable']) => {
       if (!truthTable) return
-      const answerToSubmit = {
-        formula: displayAnswer,
-        truthTable,
-      }
-      handleChange(answerToSubmit)
+      submitAnswer(displayAnswer, truthTable)
     },
-    [displayAnswer, handleChange],
+    [displayAnswer, submitAnswer],
   )
 
   const onRemoveTruthTable = useCallback(() => {
-    const answerToSubmit = {
-      formula: displayAnswer,
-      truthTable: undefined,
-    }
-    handleChange(answerToSubmit)
-  }, [displayAnswer, handleChange])
+    submitAnswer(displayAnswer, undefined)
+  }, [displayAnswer, submitAnswer])
 
   return (
     <ResponseAreaOmniInputContainer
       preResponseText={preResponseText}
       postResponseText={postResponseText}>
       <Stack spacing={1}>
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          {SYMBOLS.map(symbol => (
-            <Button
-              key={symbol.value}
-              variant="outlined"
-              size="small"
-              onClick={() => insertSymbol(symbol.value)}
-              title={symbol.title}
-              sx={{ minWidth: '40px' }}
-            >
-              {symbol.label}
-            </Button>
-          ))}
-        </Stack>
+        <PropositionalLogicSymbolKeyboard onInsert={insertSymbol} />
         <Box ref={omniInputContainerRef}>
           <OmniInputResponsArea
             key={formulaKey}
