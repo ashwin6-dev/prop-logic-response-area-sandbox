@@ -21,8 +21,6 @@ export function deserializeAnswer(raw: string): PropositionalLogicAnswerSchema |
 
   const stored = raw as Partial<PersistedAnswer>
 
-  // let parsedTruthTable: PropositionalLogicAnswerSchema['truthTable'] = undefined
-
   if (typeof stored.truthTable === 'string') {
     try {
       const json = JSON.parse(stored.truthTable)
