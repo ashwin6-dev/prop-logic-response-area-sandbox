@@ -17,23 +17,12 @@ import Stack from '@mui/material/Stack'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { TruthTableSchema } from './PropositionalLogic.schema'
+import { PROPOSITIONAL_LOGIC_SYMBOLS } from './symbols'
 
 const TRUE_FALSE_OPTIONS = [
   { value: '', label: '—' },
   { value: '⊤', label: '⊤ (true)' },
   { value: '⊥', label: '⊥ (false)' },
-]
-
-const SYMBOLS = [
-  { label: '¬', value: '¬', title: 'Not' },
-  { label: '∧', value: '∧', title: 'And' },
-  { label: '∨', value: '∨', title: 'Or' },
-  { label: '→', value: '→', title: 'Implies' },
-  { label: '↔', value: '↔', title: 'If and only if' },
-  { label: '⊥', value: '⊥', title: 'False' },
-  { label: '⊤', value: '⊤', title: 'True' },
-  { label: '(', value: '(', title: 'Left parenthesis' },
-  { label: ')', value: ')', title: 'Right parenthesis' },
 ]
 
 export type TruthTableSectionProps = {
@@ -247,7 +236,7 @@ export const TruthTableSection: React.FC<TruthTableSectionProps> = ({
                           />
                           {focusedColumnIndex === idx && !isLastColumn && (
                             <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap">
-                              {SYMBOLS.map(sym => (
+                              {PROPOSITIONAL_LOGIC_SYMBOLS.map(sym => (
                                 <Button
                                   key={sym.value}
                                   variant="outlined"
