@@ -16,5 +16,3 @@ tsconfig.tsbuildinfo
 
 # env files (copy .env.example)
 .env
-
-yarn.lock
