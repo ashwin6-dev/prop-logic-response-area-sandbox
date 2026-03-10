@@ -21,6 +21,7 @@ type PropositionalLogicProps = Omit<
   allowDraw: boolean
   allowScan: boolean
   enableRefinement: boolean
+  allowTruthTable?: boolean
 }
 
 export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
@@ -29,6 +30,7 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
   answer,
   allowDraw,
   allowScan,
+  allowTruthTable = false,
   hasPreview,
   enableRefinement,
   feedback,
@@ -60,10 +62,10 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
     (formula: string, truthTable: PropositionalLogicAnswerSchema['truthTable']) => {
       handleChange({
         formula,
-        truthTable,
+        truthTable: allowTruthTable ? truthTable : undefined,
       })
     },
-    [handleChange],
+    [handleChange, allowTruthTable],
   )
 
   const onFormulaChange = useCallback<OmniInputResponsAreaProps['handleChange']>(
@@ -183,15 +185,17 @@ export const PropositionalLogic: React.FC<PropositionalLogicProps> = ({
             displayMode={displayMode}
           />
         </Box>
-        <TruthTableSection
-          formula={displayAnswer}
-          truthTable={answerObject.truthTable ?? undefined}
-          onTruthTableChange={onTruthTableChange}
-          onRemoveTruthTable={onRemoveTruthTable}
-          allowDraw={allowDraw}
-          allowScan={allowScan}
-          processingMode="markdown"
-        />
+        {allowTruthTable && (
+          <TruthTableSection
+            formula={displayAnswer}
+            truthTable={answerObject.truthTable ?? undefined}
+            onTruthTableChange={onTruthTableChange}
+            onRemoveTruthTable={onRemoveTruthTable}
+            allowDraw={allowDraw}
+            allowScan={allowScan}
+            processingMode="markdown"
+          />
+        )}
       </Stack>
     </ResponseAreaOmniInputContainer>
   )

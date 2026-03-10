@@ -65,7 +65,9 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
     if (!this.config) throw new Error('Config missing')
     let parsedAnswer: PropositionalLogicAnswerSchema
     try {
-      const raw = JSON.parse(props.answer)
+      const answerStr =
+        typeof props.answer === 'string' ? props.answer : JSON.stringify(props.answer ?? {})
+      const raw = JSON.parse(answerStr)
       parsedAnswer = {
         formula: raw.formula ?? '',
         truthTable: raw.truthTable ?? undefined,
@@ -76,6 +78,10 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
     const handleChange = (answer: PropositionalLogicAnswerSchema) => {
       props.handleChange(JSON.stringify(answer))
     }
+
+    const allowTruthTable =
+      this.config.expectedAnswer?.validTruthTable == true
+
     return PropositionalLogic({
       ...props,
       hasPreview: false,
@@ -84,6 +90,7 @@ export class PropositionalLogicResponseAreaTub extends ResponseAreaTub {
       allowDraw: this.config.allowHandwrite,
       allowScan: this.config.allowPhoto,
       enableRefinement: this.config.enableRefinement,
+      allowTruthTable,
     })
   }
 
